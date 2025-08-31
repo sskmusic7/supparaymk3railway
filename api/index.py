@@ -3,8 +3,6 @@ from flask_cors import CORS
 import os
 import requests
 import json
-from google.auth.transport.requests import Request
-import google.auth
 from datetime import datetime
 
 app = Flask(__name__)
@@ -19,13 +17,16 @@ CORPUS_ID = "6917529027641081856"
 conversation_memory = {}
 
 def get_access_token():
-    """Get Google Cloud access token"""
+    """Get Google Cloud access token from environment variable"""
     try:
-        credentials, project = google.auth.default(
-            scopes=['https://www.googleapis.com/auth/cloud-platform']
-        )
-        credentials.refresh(Request())
-        return credentials.token
+        # For Vercel deployment, use environment variable
+        token = os.getenv('GOOGLE_CLOUD_ACCESS_TOKEN')
+        if token:
+            return token
+        
+        # Fallback message for development
+        print("No GOOGLE_CLOUD_ACCESS_TOKEN environment variable found")
+        return None
     except Exception as e:
         print(f"Error getting access token: {e}")
         return None
