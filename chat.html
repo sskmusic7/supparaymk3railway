@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Ray Chat</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-image: url('images/1.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .chat-container {
+            background-image: url('images/A%20top-down%20perspective%20logo%20design,%20SUPPARAY%2014K%20in%20a%20cool%20urban%20graffiti%20style,%20high%20contrast,%20low-key%20lighting,%20deep%20shadows,%20geometric%20shapes,%20clean%20lines,%20balanced%20symmetry,%20and%20visual%20clarity.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: rgba(24, 24, 27, 0.85);
+            border-radius: 16px;
+            padding: 20px;
+            border: 3px solid rgb(99, 102, 241);
+            height: 60vh;
+            max-height: 60vh;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        .chat-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(24, 24, 27, 0.7);
+            border-radius: 16px;
+            z-index: 1;
+        }
+        
+        .chat-container > * {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: rgba(24, 24, 27, 0.3);
+            border-radius: 4px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: rgb(99, 102, 241);
+            border-radius: 4px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: rgb(79, 70, 229);
+        }
+        
+        .user-message {
+            background: rgb(99, 102, 241);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin: 8px 0;
+            margin-left: auto;
+            max-width: 85%;
+            display: block;
+        }
+        
+        .bot-message {
+            background: rgb(39, 39, 42);
+            color: rgb(244, 244, 245);
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin: 8px 0;
+            margin-right: auto;
+            max-width: 85%;
+            display: block;
+        }
+        
+        .input-field {
+            border-radius: 12px;
+            border: 1px solid rgb(39, 39, 42);
+            background: rgb(24, 24, 27);
+            color: white;
+            padding: 12px 16px;
+            outline: none;
+        }
+        
+        .input-field:focus {
+            border-color: rgb(99, 102, 241);
+        }
+        
+        .send-button {
+            background: rgb(99, 102, 241);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .send-button:hover {
+            background: rgb(79, 70, 229);
+            transform: scale(0.98);
+        }
+        
+        .clear-button {
+            background: rgb(239, 68, 68);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        
+        .clear-button:hover {
+            background: rgb(220, 38, 38);
+            transform: scale(0.98);
+        }
+        
+        .status-indicator {
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+        
+        .loading {
+            display: none;
+            color: rgb(99, 102, 241);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen">
+    <div class="max-w-4xl mx-auto p-4">
+        <header class="py-6 text-center">
+            <p class="text-zinc-300 text-lg mt-2">What's good my nigga… ask me anything</p>
+            <div class="status-indicator" id="status">
+                ✅ Connected to Google Cloud
+            </div>
+        </header>
+        
+        <main id="chat" class="chat-container">
+            <!-- Messages will appear here -->
+        </main>
+        
+        <form id="composer" class="mt-4 flex gap-2">
+            <input id="msg" class="input-field flex-1" placeholder="Ask anything…" autocomplete="off" />
+            <button type="submit" class="send-button">Send</button>
+        </form>
+        
+        <div class="mt-4 text-center">
+            <button id="clearChat" class="clear-button">Clear Chat</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            What's good my nigga… let me check them documents for you
+        </div>
+        
+        <footer class="mt-6 text-xs text-zinc-500 text-center">
+            <span id="env">Project: supparay-voice-rag • Location: us-central1 • Corpus: 6917529027641081856</span>
+        </footer>
+    </div>
+    
+    <script>
+        const chat = document.getElementById('chat');
+        const msg = document.getElementById('msg');
+        const env = document.getElementById('env');
+        const loading = document.getElementById('loading');
+        const status = document.getElementById('status');
+        const clearChat = document.getElementById('clearChat');
+        
+        let messages = [];
+        let sessionId = 'session_' + Date.now(); // Generate unique session ID
+        
+        // Check health status on load
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                if (data.vertex_ai_available) {
+                    status.textContent = '✅ Connected to Google Cloud';
+                    status.style.background = 'rgba(34, 197, 94, 0.9)';
+                } else {
+                    status.textContent = '⚠️ Using Fallback Mode';
+                    status.style.background = 'rgba(245, 158, 11, 0.9)';
+                }
+            } catch (error) {
+                status.textContent = '❌ Connection Error';
+                status.style.background = 'rgba(239, 68, 68, 0.9)';
+            }
+        }
+        
+        function append(role, text) {
+            const bubble = document.createElement('div');
+            bubble.className = role === 'user' ? 'user-message' : 'bot-message';
+            bubble.textContent = text;
+            chat.appendChild(bubble);
+            chat.scrollTop = chat.scrollHeight;
+            
+            // Add to messages array
+            messages.push({ role, content: text });
+        }
+        
+        function showLoading() {
+            loading.style.display = 'block';
+            loading.textContent = "What's good my nigga… let me check them documents for you";
+        }
+        
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+        
+        async function sendMessage(e) {
+            e.preventDefault();
+            const text = msg.value.trim();
+            if (!text) return;
+            
+            // Add user message
+            append('user', text);
+            msg.value = '';
+            
+            // Show loading
+            showLoading();
+            
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        message: text,
+                        session_id: sessionId
+                    })
+                });
+                
+                const data = await res.json();
+                
+                hideLoading();
+                
+                if (data.message) {
+                    append('bot', data.message);
+                } else {
+                    append('bot', data.error || 'Sorry, no response.');
+                }
+            } catch (err) {
+                hideLoading();
+                append('bot', 'Network error. Check your connection.');
+                console.error(err);
+            }
+        }
+        
+        function clearChatHistory() {
+            chat.innerHTML = '';
+            messages = [];
+            // Generate new session ID to start fresh conversation
+            sessionId = 'session_' + Date.now();
+        }
+        
+        // Event listeners
+        document.getElementById('composer').addEventListener('submit', sendMessage);
+        clearChat.addEventListener('click', clearChatHistory);
+        
+        // Check health on page load
+        checkHealth();
+        
+        // Focus input on load
+        msg.focus();
+    </script>
+</body>
+</html>
