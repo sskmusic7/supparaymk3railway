@@ -189,7 +189,13 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
 def home():
     return send_from_directory('../', 'chat.html')
 
-# Images are now served from public directory by Vercel automatically
+@app.route('/1.png')
+def serve_image_1():
+    return send_from_directory('../', '1.png')
+
+@app.route('/A%20top-down%20perspective%20logo%20design,%20SUPPARAY%2014K%20in%20a%20cool%20urban%20graffiti%20style,%20high%20contrast,%20low-key%20lighting,%20deep%20shadows,%20geometric%20shapes,%20clean%20lines,%20balanced%20symmetry,%20and%20visual%20clarity.jpg')
+def serve_image_supparay():
+    return send_from_directory('../', 'A top-down perspective logo design, SUPPARAY 14K in a cool urban graffiti style, high contrast, low-key lighting, deep shadows, geometric shapes, clean lines, balanced symmetry, and visual clarity.jpg')
 
 @app.route('/api/health')
 def health():
