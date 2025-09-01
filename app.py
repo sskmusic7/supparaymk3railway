@@ -21,6 +21,9 @@ def get_access_token():
     try:
         # Check for service account JSON in environment variable
         credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+        print(f"Environment variable exists: {credentials_json is not None}")
+        print(f"Environment variable length: {len(credentials_json) if credentials_json else 0}")
+        
         if credentials_json:
             try:
                 # Parse the JSON credentials
@@ -200,9 +203,12 @@ def serve_image_supparay():
 @app.route('/api/health')
 def health():
     access_token = get_access_token()
+    env_var_exists = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON') is not None
     return jsonify({
         "status": "healthy",
         "vertex_ai_available": access_token is not None,
+        "env_var_exists": env_var_exists,
+        "env_var_length": len(os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON', '')) if os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON') else 0,
         "project": PROJECT_ID,
         "location": LOCATION,
         "corpus": CORPUS_ID
