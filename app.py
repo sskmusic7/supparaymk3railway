@@ -10,7 +10,7 @@ CORS(app)
 
 # Your configuration
 PROJECT_ID = "supparay-voice-rag"
-LOCATION = "us-central1"
+LOCATION = "us"
 CORPUS_ID = "6917529027641081856"
 
 # Global conversation memory (in production, use a proper database)
