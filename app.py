@@ -233,6 +233,14 @@ def serve_image_1():
 def serve_image_supparay():
     return send_from_directory('public', 'supparay-logo.jpg', mimetype='image/jpeg')
 
+@app.route('/supparay-widget.css')
+def serve_widget_css():
+    return send_from_directory('.', 'supparay-widget.css', mimetype='text/css')
+
+@app.route('/supparay-widget.js')
+def serve_widget_js():
+    return send_from_directory('.', 'supparay-widget.js', mimetype='application/javascript')
+
 @app.route('/api/health')
 def health():
     access_token = get_access_token()
