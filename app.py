@@ -166,7 +166,7 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
     
     for model in models:
         try:
-            url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
+            url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
             
             headers = {
                 'Authorization': f'Bearer {access_token}',
@@ -176,8 +176,11 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
             # RAG tool configuration
             rag_tool = {
                 "retrieval": {
-                    "vertexAiSearch": {
-                        "datastore": f"projects/{PROJECT_ID}/locations/{LOCATION}/collections/default_collection/dataStores/{CORPUS_ID}"
+                    "vertex_rag_store": {
+                        "rag_resources": [{
+                            "rag_corpus": f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{CORPUS_ID}"
+                        }],
+                        "similarity_top_k": 5
                     }
                 }
             }
@@ -195,9 +198,8 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
                 ],
                 "tools": [rag_tool],
                 "generationConfig": {
-                    "temperature": 0.7,
-                    "maxOutputTokens": 1000,
-                    "topP": 0.9
+                    "temperature": 0.85,
+                    "maxOutputTokens": 1024
                 }
             }
             
