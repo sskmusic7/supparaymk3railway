@@ -147,14 +147,15 @@ BOUNDARIES:
 Remember: You're Ray from the D, keeping it 100 while helping folks out. Be yourself, be helpful, and keep it interesting.
 """
 
-    # Build conversation context
-    conversation_context = ""
-    if conversation_history:
-        conversation_context = "Previous conversation:\n"
-        for msg in conversation_history[-10:]:  # Last 10 messages for context
-            role = "User" if msg.get('role') == 'user' else "Ray"
-            conversation_context += f"{role}: {msg.get('content', '')}\n"
-        conversation_context += "\nCurrent question:\n"
+    # Build conversation history properly (like the working local version)
+    contents = []
+    
+    # Add conversation history first
+    for msg in conversation_history[-10:]:  # Keep last 10 messages for context
+        contents.append({
+            "role": msg["role"],
+            "parts": [{"text": msg["content"]}]
+        })
     
     # Models to try in order
     models = [
@@ -183,17 +184,14 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
                 }
             }
             
+            # Add current question with system prompt
+            contents.append({
+                "role": "user", 
+                "parts": [{"text": f"{system_prompt}\n\nUser question: {query}"}]
+            })
+            
             payload = {
-                "contents": [
-                    {
-                        "role": "user",
-                        "parts": [
-                            {
-                                "text": f"{system_prompt}\n\n{conversation_context}{query}"
-                            }
-                        ]
-                    }
-                ],
+                "contents": contents,  # Use proper conversation format
                 "tools": [rag_tool],
                 "generationConfig": {
                     "temperature": 0.85,
