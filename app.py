@@ -10,7 +10,7 @@ CORS(app)
 
 # Your configuration
 PROJECT_ID = "supparay-voice-rag"
-LOCATION = "us"
+LOCATION = "us-central1"
 CORPUS_ID = "6917529027641081856"
 
 # Global conversation memory (in production, use a proper database)
@@ -196,7 +196,6 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
                         ]
                     }
                 ],
-                "tools": [rag_tool],
                 "generationConfig": {
                     "temperature": 0.85,
                     "maxOutputTokens": 1024
