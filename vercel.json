@@ -1,20 +1,10 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.9"
     }
-  ],
+  },
   "routes": [
-    {
-      "src": "/1.png",
-      "dest": "/1.png"
-    },
-    {
-      "src": "/A%20top-down%20perspective%20logo%20design,%20SUPPARAY%2014K%20in%20a%20cool%20urban%20graffiti%20style,%20high%20contrast,%20low-key%20lighting,%20deep%20shadows,%20geometric%20shapes,%20clean%20lines,%20balanced%20symmetry,%20and%20visual%20clarity.jpg",
-      "dest": "/A%20top-down%20perspective%20logo%20design,%20SUPPARAY%2014K%20in%20a%20cool%20urban%20graffiti%20style,%20high%20contrast,%20low-key%20lighting,%20deep%20shadows,%20geometric%20shapes,%20clean%20lines,%20balanced%20symmetry,%20and%20visual%20clarity.jpg"
-    },
     {
       "src": "/api/(.*)",
       "dest": "/api/index.py"
