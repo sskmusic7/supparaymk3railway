@@ -12,6 +12,18 @@
       "dest": "/api/index.py"
     },
     {
+      "src": "/test.txt",
+      "dest": "/test.txt"
+    },
+    {
+      "src": "/1.png",
+      "dest": "/1.png"
+    },
+    {
+      "src": "/supparay-logo.jpg",
+      "dest": "/supparay-logo.jpg"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/index.py"
     }
