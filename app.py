@@ -4,7 +4,6 @@ import os
 import requests
 import json
 from datetime import datetime
-import google.auth
 
 app = Flask(__name__)
 CORS(app)
@@ -32,7 +31,7 @@ def get_access_token():
                 credentials_info = json.loads(credentials_json)
                 print("JSON parsed successfully")
                 
-                # Try to import and use Google Auth
+                # Import required libraries
                 print("Importing Google Auth libraries...")
                 from google.oauth2 import service_account
                 from google.auth.transport.requests import Request
@@ -49,10 +48,15 @@ def get_access_token():
                 print("Refreshing credentials...")
                 credentials.refresh(Request())
                 print("Credentials refreshed successfully")
+                print(f"Token obtained: {credentials.token[:50]}...")
                 return credentials.token
                 
+            except json.JSONDecodeError as e:
+                print(f"Invalid JSON in environment variable: {e}")
+                return None
             except ImportError as e:
                 print(f"Google Auth libraries not available: {e}")
+                print("Make sure google-auth is in requirements.txt")
                 return None
             except Exception as e:
                 print(f"Error processing service account credentials: {e}")
@@ -80,21 +84,20 @@ def get_access_token():
                 print(f"Error with local service account file: {e}")
                 return None
         
-        # Final fallback: try google.auth.default() like local version
+        # Fallback: try to use application default credentials
         try:
             print("Trying google.auth.default() fallback...")
+            from google.auth.transport.requests import Request
             import google.auth
-            print("google.auth imported successfully")
+            
             creds, project = google.auth.default()
             print("Default credentials obtained")
             creds.refresh(Request())
             print("Default credentials refreshed successfully")
             return creds.token
+            
         except Exception as e:
             print(f"Default auth fallback failed: {e}")
-            print(f"Error type: {type(e)}")
-            import traceback
-            traceback.print_exc()
             return None
         
         print("No service account credentials found")
@@ -102,8 +105,9 @@ def get_access_token():
         
     except Exception as e:
         print(f"Error getting access token: {e}")
+        import traceback
+        traceback.print_exc()
         return None
-
 def generate_answer_with_grounding(query, access_token, conversation_history=[]):
     """Generate answer using Vertex AI with RAG and conversation memory"""
     
@@ -143,17 +147,26 @@ BOUNDARIES:
 Remember: You're Ray from the D, keeping it 100 while helping folks out. Be yourself, be helpful, and keep it interesting.
 """
 
-
+    # Build conversation context
+    conversation_context = ""
+    if conversation_history:
+        conversation_context = "Previous conversation:\n"
+        for msg in conversation_history[-10:]:  # Last 10 messages for context
+            role = "User" if msg.get('role') == 'user' else "Ray"
+            conversation_context += f"{role}: {msg.get('content', '')}\n"
+        conversation_context += "\nCurrent question:\n"
     
-    # Use the correct API endpoint format from the documentation
-    models_to_try = [
+    # Models to try in order
+    models = [
+        "gemini-2.0-flash-exp",
         "gemini-2.5-flash", 
+        "gemini-2.0-flash-001",
         "gemini-2.0-flash"
     ]
     
-    for model in models_to_try:
+    for model in models:
         try:
-            url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
+            url = f"https://{LOCATION}-aiplatform.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
             
             headers = {
                 'Authorization': f'Bearer {access_token}',
@@ -163,37 +176,28 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
             # RAG tool configuration
             rag_tool = {
                 "retrieval": {
-                    "vertex_rag_store": {
-                        "rag_resources": [{
-                            "rag_corpus": f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{CORPUS_ID}"
-                        }],
-                        "similarity_top_k": 5
+                    "vertexAiSearch": {
+                        "datastore": f"projects/{PROJECT_ID}/locations/{LOCATION}/collections/default_collection/dataStores/{CORPUS_ID}"
                     }
                 }
             }
             
-            # Build conversation history
-            contents = []
-            
-            # Add conversation history first
-            for msg in conversation_history[-10:]:  # Keep last 10 messages for context
-                contents.append({
-                    "role": msg["role"],
-                    "parts": [{"text": msg["content"]}]
-                })
-            
-            # Add current question
-            contents.append({
-                "role": "user", 
-                "parts": [{"text": f"{system_prompt}\n\nUser question: {query}"}]
-            })
-            
             payload = {
-                "contents": contents,
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [
+                            {
+                                "text": f"{system_prompt}\n\n{conversation_context}{query}"
+                            }
+                        ]
+                    }
+                ],
                 "tools": [rag_tool],
                 "generationConfig": {
-                    "temperature": 0.85,  # Higher temperature for Ray's personality
-                    "maxOutputTokens": 1024
+                    "temperature": 0.7,
+                    "maxOutputTokens": 1000,
+                    "topP": 0.9
                 }
             }
             
@@ -234,13 +238,12 @@ def health():
     access_token = get_access_token()
     env_var_exists = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON') is not None
     return jsonify({
-        "ok": True,
-        "project": PROJECT_ID,
-        "location": LOCATION,
-        "status": "Flask server running",
+        "status": "healthy",
         "vertex_ai_available": access_token is not None,
         "env_var_exists": env_var_exists,
         "env_var_length": len(os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON', '')) if os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON') else 0,
+        "project": PROJECT_ID,
+        "location": LOCATION,
         "corpus": CORPUS_ID
     })
 
@@ -302,3 +305,4 @@ def chat():
 # For local development
 if __name__ == '__main__':
     app.run(debug=True)
+
