@@ -17,15 +17,41 @@ CORPUS_ID = "6917529027641081856"
 conversation_memory = {}
 
 def get_access_token():
-    """Get Google Cloud access token from environment variable"""
+    """Get Google Cloud access token using service account credentials"""
     try:
-        # For Vercel deployment, use environment variable
-        token = os.getenv('GOOGLE_CLOUD_ACCESS_TOKEN')
-        if token:
-            return token
+        # Check for service account JSON in environment variable
+        credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+        if credentials_json:
+            # Parse the JSON credentials
+            import json
+            credentials_info = json.loads(credentials_json)
+            
+            # Create credentials from service account info
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request
+            
+            credentials = service_account.Credentials.from_service_account_info(
+                credentials_info,
+                scopes=['https://www.googleapis.com/auth/cloud-platform']
+            )
+            
+            # Refresh the credentials to get a token
+            credentials.refresh(Request())
+            return credentials.token
         
-        # Fallback message for development
-        print("No GOOGLE_CLOUD_ACCESS_TOKEN environment variable found")
+        # Fallback: try to use local service account file (for development)
+        if os.path.exists('ray-chatbot-key.json'):
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request
+            
+            credentials = service_account.Credentials.from_service_account_file(
+                'ray-chatbot-key.json',
+                scopes=['https://www.googleapis.com/auth/cloud-platform']
+            )
+            credentials.refresh(Request())
+            return credentials.token
+        
+        print("No service account credentials found")
         return None
     except Exception as e:
         print(f"Error getting access token: {e}")

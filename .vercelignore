@@ -19,3 +19,7 @@ __pycache__/
 
 # OS
 Thumbs.db
+
+# Service account keys (NEVER deploy these!)
+*-key.json
+ray-chatbot-key.json
