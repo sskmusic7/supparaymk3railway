@@ -191,11 +191,11 @@ def home():
 
 @app.route('/1.png')
 def serve_image_1():
-    return send_from_directory('../', '1.png', mimetype='image/png')
+    return send_from_directory('../public', '1.png', mimetype='image/png')
 
 @app.route('/supparay-logo.jpg')
 def serve_image_supparay():
-    return send_from_directory('../', 'supparay-logo.jpg', mimetype='image/jpeg')
+    return send_from_directory('../public', 'supparay-logo.jpg', mimetype='image/jpeg')
 
 @app.route('/api/health')
 def health():
