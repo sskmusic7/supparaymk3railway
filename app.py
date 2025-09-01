@@ -158,9 +158,7 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
     
     # Models to try in order
     models = [
-        "gemini-2.0-flash-exp",
         "gemini-2.5-flash", 
-        "gemini-2.0-flash-001",
         "gemini-2.0-flash"
     ]
     
@@ -196,6 +194,7 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
                         ]
                     }
                 ],
+                "tools": [rag_tool],
                 "generationConfig": {
                     "temperature": 0.85,
                     "maxOutputTokens": 1024
