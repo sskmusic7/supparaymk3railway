@@ -189,9 +189,7 @@ Remember: You're Ray from the D, keeping it 100 while helping folks out. Be your
 def home():
     return send_from_directory('../', 'chat.html')
 
-@app.route('/images/<path:filename>')
-def serve_image(filename):
-    return send_from_directory('../images', filename)
+# Images are now served from public directory by Vercel automatically
 
 @app.route('/api/health')
 def health():

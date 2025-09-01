@@ -8,10 +8,6 @@
   ],
   "routes": [
     {
-      "src": "/images/(.*)",
-      "dest": "/images/$1"
-    },
-    {
       "src": "/api/(.*)",
       "dest": "/api/index.py"
     },
