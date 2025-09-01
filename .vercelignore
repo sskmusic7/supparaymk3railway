@@ -1,0 +1,21 @@
+# Virtual environments
+.venv/
+rag-chatbot-env/
+env/
+venv/
+
+# Development files
+.DS_Store
+*.log
+*.pyc
+__pycache__/
+
+# Git
+.git/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
