@@ -27,20 +27,28 @@ def get_access_token():
         
         if credentials_json:
             try:
+                print("Attempting to parse service account JSON...")
                 # Parse the JSON credentials
                 credentials_info = json.loads(credentials_json)
+                print("JSON parsed successfully")
                 
                 # Try to import and use Google Auth
+                print("Importing Google Auth libraries...")
                 from google.oauth2 import service_account
                 from google.auth.transport.requests import Request
+                print("Google Auth libraries imported successfully")
                 
+                print("Creating service account credentials...")
                 credentials = service_account.Credentials.from_service_account_info(
                     credentials_info,
                     scopes=['https://www.googleapis.com/auth/cloud-platform']
                 )
+                print("Service account credentials created")
                 
                 # Refresh the credentials to get a token
+                print("Refreshing credentials...")
                 credentials.refresh(Request())
+                print("Credentials refreshed successfully")
                 return credentials.token
                 
             except ImportError as e:
@@ -48,6 +56,9 @@ def get_access_token():
                 return None
             except Exception as e:
                 print(f"Error processing service account credentials: {e}")
+                print(f"Error type: {type(e)}")
+                import traceback
+                traceback.print_exc()
                 return None
         
         # Fallback: try to use local service account file (for development)
@@ -71,12 +82,19 @@ def get_access_token():
         
         # Final fallback: try google.auth.default() like local version
         try:
+            print("Trying google.auth.default() fallback...")
             import google.auth
+            print("google.auth imported successfully")
             creds, project = google.auth.default()
+            print("Default credentials obtained")
             creds.refresh(Request())
+            print("Default credentials refreshed successfully")
             return creds.token
         except Exception as e:
             print(f"Default auth fallback failed: {e}")
+            print(f"Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
             return None
         
         print("No service account credentials found")
