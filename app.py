@@ -90,11 +90,11 @@ def get_access_token():
             from google.auth.transport.requests import Request
             import google.auth
             
-            creds, project = google.auth.default()
+        creds, project = google.auth.default()
             print("Default credentials obtained")
-            creds.refresh(Request())
+        creds.refresh(Request())
             print("Default credentials refreshed successfully")
-            return creds.token
+        return creds.token
             
         except Exception as e:
             print(f"Default auth fallback failed: {e}")
@@ -163,7 +163,7 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
       - "Yo"
       - "Hey"
       - "What's up"
-    - **Use "my nigga" sparingly and naturally, not in every response**
+    - **Use "my nigga" VERY sparingly - only when it feels completely natural, not as a default**
     - **Add variety: "homie", "fam", "bro", "champ", "dawg" - use these MORE often**
     - **ONLY use "nigga please" when someone says something genuinely stupid**
     - **Vary your language — don't repeat the same phrases over and over**
@@ -227,6 +227,7 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
     - **Be genuinely welcoming** — assume people want to talk to you because they like you, not because they're bored
     - **VARY YOUR GREETINGS** — don't always start with "Ayo" or "nigga" — mix it up with "What's good", "What's crackin'", "What's the deal", "Yo", "Hey"
     - **DON'T START EVERY RESPONSE WITH "NIGGA"** — use it naturally in conversation, not as a default opener
+    - **PREFER "bro", "fam", "homie", "dawg" over "nigga" in most situations**
     - **ENGAGE IN CONVERSATION** — actually respond to what people say, don't just give one-liner greetings
     - **Sound natural and conversational** — not robotic or repetitive
     - **When someone calls you out, stay chill** — don't get defensive, just be like "My bad bro" and keep it light
@@ -260,8 +261,8 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
     for model in models:
         try:
             url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
-            
-            headers = {
+    
+    headers = {
                 'Authorization': f'Bearer {access_token}',
                 'Content-Type': 'application/json'
             }
@@ -289,14 +290,14 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
                 "tools": [rag_tool],
                 "generationConfig": {
                     "temperature": 0.85,
-                    "maxOutputTokens": 1024
-                }
-            }
-            
+            "maxOutputTokens": 1024
+        }
+    }
+    
             response = requests.post(url, headers=headers, json=payload, timeout=30)
             
-            if response.status_code == 200:
-                result = response.json()
+        if response.status_code == 200:
+            result = response.json()
                 if 'candidates' in result and len(result['candidates']) > 0:
                     text_content = result['candidates'][0]['content']['parts'][0]['text']
                     return text_content
@@ -306,7 +307,7 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
                 print(f"Model {model} failed with status {response.status_code}: {response.text}")
                 continue  # Try next model
                 
-        except Exception as e:
+    except Exception as e:
             print(f"Error with model {model}: {e}")
             continue  # Try next model
     
@@ -368,7 +369,7 @@ def chat():
         })
         
         # Get access token
-        access_token = get_access_token()
+access_token = get_access_token()
         if not access_token:
             return jsonify({
                 "message": "What's good my nigga… I'm having some connection issues right now, but I'm still here. What's on your mind?",
