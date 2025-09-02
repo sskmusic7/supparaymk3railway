@@ -313,6 +313,16 @@ def serve_supparay_logo():
     """Serve the supparay logo image"""
     return send_from_directory('public', 'supparay-logo.jpg')
 
+@app.route('/supparay-widget.css')
+def serve_supparay_widget_css():
+    """Serve the supparay widget CSS"""
+    return send_from_directory('.', 'supparay-widget.css')
+
+@app.route('/supparay-widget.js')
+def serve_supparay_widget_js():
+    """Serve the supparay widget JavaScript"""
+    return send_from_directory('.', 'supparay-widget.js')
+
 @app.route('/api/health')
 def health_check():
     """Health check endpoint"""
