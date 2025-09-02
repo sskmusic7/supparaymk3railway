@@ -303,6 +303,16 @@ def serve_image(filename):
     """Serve images from the images directory"""
     return send_from_directory('images', filename)
 
+@app.route('/1.png')
+def serve_1_png():
+    """Serve the main background image"""
+    return send_from_directory('images', '1.png')
+
+@app.route('/supparay-logo.jpg')
+def serve_supparay_logo():
+    """Serve the supparay logo image"""
+    return send_from_directory('public', 'supparay-logo.jpg')
+
 @app.route('/api/health')
 def health_check():
     """Health check endpoint"""
