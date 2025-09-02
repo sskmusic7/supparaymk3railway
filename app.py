@@ -1,8 +1,10 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import requests
 import json
+from google.auth.transport.requests import Request
+import google.auth
 from datetime import datetime
 
 app = Flask(__name__)
@@ -17,110 +19,32 @@ CORPUS_ID = "6917529027641081856"
 conversation_memory = {}
 
 def get_access_token():
-    """Get Google Cloud access token using service account credentials"""
+    """Get Google Cloud access token"""
     try:
-        # Check for service account JSON in environment variable
-        credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
-        print(f"Environment variable exists: {credentials_json is not None}")
-        print(f"Environment variable length: {len(credentials_json) if credentials_json else 0}")
-        
-        if credentials_json:
-            try:
-                print("Attempting to parse service account JSON...")
-                # Parse the JSON credentials
-                credentials_info = json.loads(credentials_json)
-                print("JSON parsed successfully")
-                
-                # Import required libraries
-                print("Importing Google Auth libraries...")
-                from google.oauth2 import service_account
-                from google.auth.transport.requests import Request
-                print("Google Auth libraries imported successfully")
-                
-                print("Creating service account credentials...")
-                credentials = service_account.Credentials.from_service_account_info(
-                    credentials_info,
-                    scopes=['https://www.googleapis.com/auth/cloud-platform']
-                )
-                print("Service account credentials created")
-                
-                # Refresh the credentials to get a token
-                print("Refreshing credentials...")
-                credentials.refresh(Request())
-                print("Credentials refreshed successfully")
-                print(f"Token obtained: {credentials.token[:50]}...")
-                return credentials.token
-                
-            except json.JSONDecodeError as e:
-                print(f"Invalid JSON in environment variable: {e}")
-                return None
-            except ImportError as e:
-                print(f"Google Auth libraries not available: {e}")
-                print("Make sure google-auth is in requirements.txt")
-                return None
-            except Exception as e:
-                print(f"Error processing service account credentials: {e}")
-                print(f"Error type: {type(e)}")
-                import traceback
-                traceback.print_exc()
-                return None
-        
-        # Fallback: try to use local service account file (for development)
-        if os.path.exists('ray-chatbot-key.json'):
-            try:
-                from google.oauth2 import service_account
-                from google.auth.transport.requests import Request
-                
-                credentials = service_account.Credentials.from_service_account_file(
-                    'ray-chatbot-key.json',
-                    scopes=['https://www.googleapis.com/auth/cloud-platform']
-                )
-                credentials.refresh(Request())
-                return credentials.token
-            except ImportError as e:
-                print(f"Google Auth libraries not available for local file: {e}")
-                return None
-            except Exception as e:
-                print(f"Error with local service account file: {e}")
-                return None
-        
-        # Fallback: try to use application default credentials
-        try:
-            print("Trying google.auth.default() fallback...")
-            from google.auth.transport.requests import Request
-            import google.auth
-            
         creds, project = google.auth.default()
-            print("Default credentials obtained")
         creds.refresh(Request())
-            print("Default credentials refreshed successfully")
         return creds.token
-            
-        except Exception as e:
-            print(f"Default auth fallback failed: {e}")
-            return None
-        
-        print("No service account credentials found")
-        return None
-        
     except Exception as e:
-        print(f"Error getting access token: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Authentication error: {e}")
         return None
-def generate_answer_with_grounding(query, access_token, conversation_history=[]):
-    """Generate answer using Vertex AI with RAG and conversation memory"""
+
+def generate_answer_with_grounding(question, access_token, conversation_history=None):
+    """Generate answer using Gemini with RAG grounding and Ray's personality"""
     
-    # Get current date and day for real-time logic
-    current_datetime = datetime.now()
-    current_day = current_datetime.strftime("%A")
-    current_date = current_datetime.strftime("%B %d, %Y")
+    if conversation_history is None:
+        conversation_history = []
     
+    # Get current date/time for accurate responses
+    current_date = datetime.now()
+    current_day = current_date.strftime("%A")  # Monday, Tuesday, etc.
+    current_date_str = current_date.strftime("%B %d, %Y")  # August 31, 2025
+    
+    # Ray's system prompt with personality rules
     system_prompt = f"""You are Ray — a 33‑year‑old Black man from Detroit. Think Katt Williams' energy: sharp wit, dramatic pauses, tension‑and‑release, and smooth delivery. You're naturally funny, confident, and people like talking to you because you keep it real without overdoing it. You're smart, streetwise, and quick with a comeback
 
     CURRENT REAL-WORLD INFORMATION:
     - Today is {current_day}
-    - Current date: {current_date}
+    - Current date: {current_date_str}
     - Use this real-world information for any date/time questions
 
     Personality Rules:
@@ -152,7 +76,7 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
 
     Language Variety Rules:
     - **Mix up your greetings and responses:**
-      - "What's good"
+      - "What's good my nigga"
       - "What up fam"
       - "Aight bet bro"
       - "Yo what's crackin'"
@@ -160,9 +84,6 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
       - "Aight bet dawg"
       - "Yo what's the deal"
       - "What's the word"
-      - "Yo"
-      - "Hey"
-      - "What's up"
     - **Use "my nigga" naturally - about 65% of the time, not every response but not sparingly either**
     - **Add variety: "homie", "fam", "bro", "champ", "dawg" - use these MORE often**
     - **ONLY use "nigga please" when someone says something genuinely stupid**
@@ -242,34 +163,42 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
     - When documents mention past events or dates, distinguish between historical information and current reality
     - If someone asks "what day is it today" or similar, use the actual current date, not what's mentioned in documents"""
 
-    # Build conversation history properly (like the working local version)
-    contents = []
-    
-    # Add conversation history first
-    for msg in conversation_history[-10:]:  # Keep last 10 messages for context
-        contents.append({
-            "role": msg["role"],
-            "parts": [{"text": msg["content"]}]
-        })
-    
-    # Models to try in order
-    models = [
+    # Use the correct API endpoint format from the documentation
+    models_to_try = [
         "gemini-2.5-flash", 
         "gemini-2.0-flash"
     ]
     
-    for model in models:
-        try:
-            url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
+    for model in models_to_try:
+        # Use v1beta1 API endpoint as shown in documentation
+        url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
     
     headers = {
-                'Authorization': f'Bearer {access_token}',
-                'Content-Type': 'application/json'
-            }
-            
-            # RAG tool configuration
-            rag_tool = {
-                "retrieval": {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    
+        # Build conversation history
+        contents = []
+        
+        # Add conversation history first
+        for msg in conversation_history[-10:]:  # Keep last 10 messages for context
+            contents.append({
+                "role": msg["role"],
+                "parts": [{"text": msg["content"]}]
+            })
+        
+        # Add current question
+        contents.append({
+            "role": "user", 
+            "parts": [{"text": f"{system_prompt}\n\nUser question: {question}"}]
+        })
+        
+        # Use the correct format from the API documentation with Ray's personality
+    payload = {
+            "contents": contents,
+        "tools": [{
+            "retrieval": {
                     "vertex_rag_store": {
                         "rag_resources": [{
                             "rag_corpus": f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{CORPUS_ID}"
@@ -277,111 +206,89 @@ def generate_answer_with_grounding(query, access_token, conversation_history=[])
                         "similarity_top_k": 5
                     }
                 }
-            }
-            
-            # Add current question with system prompt
-            contents.append({
-                "role": "user", 
-                "parts": [{"text": f"{system_prompt}\n\nUser question: {query}"}]
-            })
-            
-            payload = {
-                "contents": contents,  # Use proper conversation format
-                "tools": [rag_tool],
-                "generationConfig": {
-                    "temperature": 0.85,
+            }],
+            "generationConfig": {
+                "temperature": 0.85,  # Higher temperature for Ray's personality
             "maxOutputTokens": 1024
         }
     }
     
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
+    try:
+        response = requests.post(url, headers=headers, json=payload)
         if response.status_code == 200:
             result = response.json()
-                if 'candidates' in result and len(result['candidates']) > 0:
-                    text_content = result['candidates'][0]['content']['parts'][0]['text']
-                    return text_content
-                else:
-                    continue  # Try next model
+            if "candidates" in result and result["candidates"]:
+                return result["candidates"][0]["content"]["parts"][0]["text"]
             else:
-                print(f"Model {model} failed with status {response.status_code}: {response.text}")
-                continue  # Try next model
-                
+                    continue  # Try next model
+        else:
+                # Show the actual error for debugging
+                error_detail = f"Model {model}: {response.status_code} - {response.text}"
+                if "not found" in response.text.lower():
+                    continue  # Try next model
+                return f"API Error: {error_detail}"
     except Exception as e:
-            print(f"Error with model {model}: {e}")
             continue  # Try next model
     
-    # If all models fail
-    return "What's good my nigga… I'm having some technical difficulties right now, but I'm still here for you. What's on your mind?"
+    return "What's good my nigga… what's poppin' with you"
 
 @app.route('/')
 def home():
+    """Serve the main chat interface"""
     return send_from_directory('.', 'chat.html')
 
-@app.route('/1.png')
-def serve_image_1():
-    return send_from_directory('public', '1.png', mimetype='image/png')
-
-@app.route('/supparay-logo.jpg')
-def serve_image_supparay():
-    return send_from_directory('public', 'supparay-logo.jpg', mimetype='image/jpeg')
-
-@app.route('/supparay-widget.css')
-def serve_widget_css():
-    return send_from_directory('.', 'supparay-widget.css', mimetype='text/css')
-
-@app.route('/supparay-widget.js')
-def serve_widget_js():
-    return send_from_directory('.', 'supparay-widget.js', mimetype='application/javascript')
+@app.route('/images/<path:filename>')
+def serve_image(filename):
+    """Serve images from the images directory"""
+    return send_from_directory('images', filename)
 
 @app.route('/api/health')
-def health():
+def health_check():
+    """Health check endpoint"""
     access_token = get_access_token()
-    env_var_exists = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON') is not None
     return jsonify({
-        "status": "healthy",
-        "vertex_ai_available": access_token is not None,
-        "env_var_exists": env_var_exists,
-        "env_var_length": len(os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON', '')) if os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON') else 0,
+        "ok": True,
         "project": PROJECT_ID,
         "location": LOCATION,
-        "corpus": CORPUS_ID
+        "status": "Flask server running",
+        "vertex_ai_available": access_token is not None
     })
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
+    """Handle chat messages"""
     try:
-        data = request.json
-        message = data.get('message', '')
-        session_id = data.get('session_id', 'default_session')
+        data = request.get_json()
+        message = data.get("message", "").strip()
+        session_id = data.get("session_id", "default")  # Use session ID for conversation tracking
         
         if not message:
-            return jsonify({"error": "No message provided"}), 400
-        
-        # Initialize conversation memory for this session if it doesn't exist
-        if session_id not in conversation_memory:
-            conversation_memory[session_id] = []
-        
-        # Add user message to conversation memory
-        conversation_memory[session_id].append({
-            "role": "user",
-            "content": message
-        })
+            return jsonify({"error": "Empty message"}), 400
         
         # Get access token
 access_token = get_access_token()
         if not access_token:
             return jsonify({
-                "message": "What's good my nigga… I'm having some connection issues right now, but I'm still here. What's on your mind?",
-                "status": "No access token available"
-            }), 200
+                "message": "What's good my nigga… what's poppin' with you",
+                "status": "Using fallback - not authenticated"
+            })
+        
+        # Get conversation history for this session
+        if session_id not in conversation_memory:
+            conversation_memory[session_id] = []
+        
+        # Add user message to history
+        conversation_memory[session_id].append({
+            "role": "user",
+            "content": message
+        })
         
         # Generate response with conversation history
         response = generate_answer_with_grounding(message, access_token, conversation_memory[session_id])
         
-        # Add bot response to conversation memory
+        # Add bot response to history
         conversation_memory[session_id].append({
-            "role": "assistant", 
+            "role": "assistant",
             "content": response
         })
         
@@ -403,7 +310,13 @@ access_token = get_access_token()
             "error": str(e)
         }), 500
 
-# For local development
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    print("🎤 Starting 'Rap to Ray' Chatbot...")
+    print("🔥 HTML version with Flask backend")
+    print("🎯 Features:")
+    print("   - Clean HTML interface")
+    print("   - Proper scrolling chat container")
+    print("   - Auto-clearing input field")
+    print("   - Ray's personality with real-time date logic")
+    print("🔥 Chatbot ready at http://localhost:5000")
+    app.run(debug=True, host='0.0.0.0', port=5000)
