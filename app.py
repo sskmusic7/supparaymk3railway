@@ -19,74 +19,13 @@ CORPUS_ID = "6917529027641081856"
 conversation_memory = {}
 
 def get_access_token():
-    """Get Google Cloud access token using service account credentials"""
+    """Get Google Cloud access token"""
     try:
-        # Check for service account JSON in environment variable
-        credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
-        print(f"Environment variable exists: {credentials_json is not None}")
-        print(f"Environment variable length: {len(credentials_json) if credentials_json else 0}")
-        
-        if credentials_json:
-            try:
-                print("Attempting to parse service account JSON...")
-                credentials_info = json.loads(credentials_json)
-                print("JSON parsed successfully")
-                
-                print("Importing Google Auth libraries...")
-                from google.oauth2 import service_account
-                from google.auth.transport.requests import Request
-                print("Google Auth libraries imported successfully")
-                
-                print("Creating service account credentials...")
-                credentials = service_account.Credentials.from_service_account_info(
-                    credentials_info,
-                    scopes=['https://www.googleapis.com/auth/cloud-platform']
-                )
-                print("Service account credentials created")
-                
-                print("Refreshing credentials...")
-                credentials.refresh(Request())
-                print("Credentials refreshed successfully")
-                print(f"Token obtained: {credentials.token[:50]}...")
-                return credentials.token
-                
-            except json.JSONDecodeError as e:
-                print(f"Invalid JSON in environment variable: {e}")
-                return None
-            except ImportError as e:
-                print(f"Google Auth libraries not available: {e}")
-                print("Make sure google-auth is in requirements.txt")
-                return None
-            except Exception as e:
-                print(f"Error processing service account credentials: {e}")
-                print(f"Error type: {type(e)}")
-                import traceback
-                traceback.print_exc()
-                return None
-        
-        # Fallback: try to use application default credentials
-        try:
-            print("Trying google.auth.default() fallback...")
-            from google.auth.transport.requests import Request
-            import google.auth
-            
-            creds, project = google.auth.default()
-            print("Default credentials obtained")
-            creds.refresh(Request())
-            print("Default credentials refreshed successfully")
-            return creds.token
-            
-        except Exception as e:
-            print(f"Default auth fallback failed: {e}")
-            return None
-        
-        print("No service account credentials found")
-        return None
-        
+        creds, project = google.auth.default()
+        creds.refresh(Request())
+        return creds.token
     except Exception as e:
-        print(f"Error getting access token: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Authentication error: {e}")
         return None
 
 def generate_answer_with_grounding(question, access_token, conversation_history=None):
@@ -145,13 +84,12 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
       - "Aight bet dawg"
       - "Yo what's the deal"
       - "What's the word"
-    - **Use "my nigga" naturally - about 65% of the time, not every response but not sparingly either**
-    - **Add variety: "homie", "fam", "bro", "champ", "dawg" - use these MORE often**
+    - **Use "my nigga" more than just "nigga"**
+    - **Add variety: "homie", "fam", "bro", "champ", "dawg"**
     - **ONLY use "nigga please" when someone says something genuinely stupid**
     - **Vary your language — don't repeat the same phrases over and over**
-    - **Use "bro", "fam", "homie", "dawg" for natural flow - these should be your go-to terms**
-    - **Limit "nigga" to emphasis or when it naturally flows - NOT at the beginning of every response**
-    - **"My homie" should be "homie" - never "my homie"**
+    - **Use "my nigga", "bro", "fam", "homie", "dawg" for natural flow**
+    - **Limit standalone "nigga" to emphasis or when it naturally flows**
 
     Roasting Rules:
     - **NEVER get emotional, defensive, or apologetic during roasting**
@@ -207,12 +145,10 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
     - **NO PATRONIZING "OR JUST" PATTERNS** — don't say "you good or you just bored" — it sounds combative and patronizing
     - **NO "OR YOU" PATTERNS AT ALL** — don't say "you good or you tweaking", "you lost or you just confused", "you confused or you calling me" — these all sound combative
     - **Be genuinely welcoming** — assume people want to talk to you because they like you, not because they're bored
-    - **VARY YOUR GREETINGS** — don't always start with "Ayo" or "nigga" — mix it up with "What's good", "What's crackin'", "What's the deal", "Yo", "Hey"
-    - **DON'T START EVERY RESPONSE WITH "NIGGA"** — use it naturally in conversation, not as a default opener
-    - **Mix it up - use "nigga" about 65% of the time, "bro/fam/homie/dawg" the other 35%**
+    - **VARY YOUR GREETINGS** — don't always start with "Ayo" — mix it up with "What's good", "What's crackin'", "What's the deal"
     - **ENGAGE IN CONVERSATION** — actually respond to what people say, don't just give one-liner greetings
     - **Sound natural and conversational** — not robotic or repetitive
-    - **When someone calls you out, stay chill** — don't get defensive, just be like "My bad bro" and keep it light
+    - **When someone calls you out, stay chill** — don't get defensive, just be like "My bad my nigga" and keep it light
 
     IMPORTANT: When answering questions about documents or providing information, give the facts first, then add Ray's personality and style. Keep responses grounded in the retrieved information while maintaining Ray's authentic Detroit energy.
     
@@ -233,12 +169,12 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
     for model in models_to_try:
         # Use v1beta1 API endpoint as shown in documentation
         url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
-    
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-    
+        
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
         # Build conversation history
         contents = []
         
@@ -256,10 +192,10 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
         })
         
         # Use the correct format from the API documentation with Ray's personality
-    payload = {
+        payload = {
             "contents": contents,
-        "tools": [{
-            "retrieval": {
+            "tools": [{
+                "retrieval": {
                     "vertex_rag_store": {
                         "rag_resources": [{
                             "rag_corpus": f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{CORPUS_ID}"
@@ -270,25 +206,25 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
             }],
             "generationConfig": {
                 "temperature": 0.85,  # Higher temperature for Ray's personality
-            "maxOutputTokens": 1024
+                "maxOutputTokens": 1024
+            }
         }
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code == 200:
-            result = response.json()
-            if "candidates" in result and result["candidates"]:
-                return result["candidates"][0]["content"]["parts"][0]["text"]
-            else:
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            if response.status_code == 200:
+                result = response.json()
+                if "candidates" in result and result["candidates"]:
+                    return result["candidates"][0]["content"]["parts"][0]["text"]
+                else:
                     continue  # Try next model
-        else:
+            else:
                 # Show the actual error for debugging
                 error_detail = f"Model {model}: {response.status_code} - {response.text}"
                 if "not found" in response.text.lower():
                     continue  # Try next model
                 return f"API Error: {error_detail}"
-    except Exception as e:
+        except Exception as e:
             continue  # Try next model
     
     return "What's good my nigga… what's poppin' with you"
@@ -312,16 +248,6 @@ def serve_1_png():
 def serve_supparay_logo():
     """Serve the supparay logo image"""
     return send_from_directory('public', 'supparay-logo.jpg')
-
-@app.route('/supparay-widget.css')
-def serve_supparay_widget_css():
-    """Serve the supparay widget CSS"""
-    return send_from_directory('.', 'supparay-widget.css')
-
-@app.route('/supparay-widget.js')
-def serve_supparay_widget_js():
-    """Serve the supparay widget JavaScript"""
-    return send_from_directory('.', 'supparay-widget.js')
 
 @app.route('/api/health')
 def health_check():
@@ -347,7 +273,7 @@ def chat():
             return jsonify({"error": "Empty message"}), 400
         
         # Get access token
-access_token = get_access_token()
+        access_token = get_access_token()
         if not access_token:
             return jsonify({
                 "message": "What's good my nigga… what's poppin' with you",
