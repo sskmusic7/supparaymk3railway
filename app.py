@@ -70,11 +70,11 @@ def get_access_token():
             from google.auth.transport.requests import Request
             import google.auth
             
-            creds, project = google.auth.default()
+        creds, project = google.auth.default()
             print("Default credentials obtained")
-            creds.refresh(Request())
+        creds.refresh(Request())
             print("Default credentials refreshed successfully")
-            return creds.token
+        return creds.token
             
         except Exception as e:
             print(f"Default auth fallback failed: {e}")
@@ -233,12 +233,12 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
     for model in models_to_try:
         # Use v1beta1 API endpoint as shown in documentation
         url = f"https://{LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{LOCATION}/publishers/google/models/{model}:generateContent"
-        
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-        
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    
         # Build conversation history
         contents = []
         
@@ -256,10 +256,10 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
         })
         
         # Use the correct format from the API documentation with Ray's personality
-        payload = {
+    payload = {
             "contents": contents,
-            "tools": [{
-                "retrieval": {
+        "tools": [{
+            "retrieval": {
                     "vertex_rag_store": {
                         "rag_resources": [{
                             "rag_corpus": f"projects/{PROJECT_ID}/locations/{LOCATION}/ragCorpora/{CORPUS_ID}"
@@ -270,25 +270,25 @@ def generate_answer_with_grounding(question, access_token, conversation_history=
             }],
             "generationConfig": {
                 "temperature": 0.85,  # Higher temperature for Ray's personality
-                "maxOutputTokens": 1024
-            }
+            "maxOutputTokens": 1024
         }
-        
-        try:
-            response = requests.post(url, headers=headers, json=payload)
-            if response.status_code == 200:
-                result = response.json()
-                if "candidates" in result and result["candidates"]:
-                    return result["candidates"][0]["content"]["parts"][0]["text"]
-                else:
-                    continue  # Try next model
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code == 200:
+            result = response.json()
+            if "candidates" in result and result["candidates"]:
+                return result["candidates"][0]["content"]["parts"][0]["text"]
             else:
+                    continue  # Try next model
+        else:
                 # Show the actual error for debugging
                 error_detail = f"Model {model}: {response.status_code} - {response.text}"
                 if "not found" in response.text.lower():
                     continue  # Try next model
                 return f"API Error: {error_detail}"
-        except Exception as e:
+    except Exception as e:
             continue  # Try next model
     
     return "What's good my nigga… what's poppin' with you"
@@ -313,15 +313,6 @@ def serve_supparay_logo():
     """Serve the supparay logo image"""
     return send_from_directory('public', 'supparay-logo.jpg')
 
-@app.route('/supparay-widget.css')
-def serve_supparay_widget_css():
-    """Serve the supparay widget CSS"""
-    return send_from_directory('.', 'supparay-widget.css')
-
-@app.route('/supparay-widget.js')
-def serve_supparay_widget_js():
-    """Serve the supparay widget JavaScript"""
-    return send_from_directory('.', 'supparay-widget.js')
 
 @app.route('/api/health')
 def health_check():
@@ -347,7 +338,7 @@ def chat():
             return jsonify({"error": "Empty message"}), 400
         
         # Get access token
-        access_token = get_access_token()
+access_token = get_access_token()
         if not access_token:
             return jsonify({
                 "message": "What's good my nigga… what's poppin' with you",
