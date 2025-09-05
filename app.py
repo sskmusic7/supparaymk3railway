@@ -70,11 +70,11 @@ def get_access_token():
             from google.auth.transport.requests import Request
             import google.auth
             
-        creds, project = google.auth.default()
+            creds, project = google.auth.default()
             print("Default credentials obtained")
-        creds.refresh(Request())
+            creds.refresh(Request())
             print("Default credentials refreshed successfully")
-        return creds.token
+            return creds.token
             
         except Exception as e:
             print(f"Default auth fallback failed: {e}")
