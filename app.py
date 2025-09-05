@@ -19,13 +19,67 @@ CORPUS_ID = "6917529027641081856"
 conversation_memory = {}
 
 def get_access_token():
-    """Get Google Cloud access token"""
+    """Get Google Cloud access token using service account credentials"""
     try:
-        creds, project = google.auth.default()
-        creds.refresh(Request())
-        return creds.token
+        # Check for service account JSON in environment variable
+        credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+        print(f"Environment variable exists: {credentials_json is not None}")
+        print(f"Environment variable length: {len(credentials_json) if credentials_json else 0}")
+        
+        if credentials_json:
+            try:
+                print("Attempting to parse service account JSON...")
+                credentials_info = json.loads(credentials_json)
+                print("JSON parsed successfully")
+                
+                print("Importing Google Auth libraries...")
+                from google.oauth2 import service_account
+                print("Google Auth libraries imported successfully")
+                
+                print("Creating service account credentials...")
+                credentials = service_account.Credentials.from_service_account_info(
+                    credentials_info,
+                    scopes=['https://www.googleapis.com/auth/cloud-platform']
+                )
+                print("Service account credentials created")
+                
+                print("Refreshing credentials...")
+                credentials.refresh(Request())
+                print("Credentials refreshed successfully")
+                print(f"Token obtained: {credentials.token[:50]}...")
+                return credentials.token
+                
+            except json.JSONDecodeError as e:
+                print(f"Invalid JSON in environment variable: {e}")
+                return None
+            except ImportError as e:
+                print(f"Google Auth libraries not available: {e}")
+                print("Make sure google-auth is in requirements.txt")
+                return None
+            except Exception as e:
+                print(f"Error processing service account credentials: {e}")
+                print(f"Error type: {type(e)}")
+                import traceback
+                traceback.print_exc()
+                return None
+        
+        # Fallback: try to use application default credentials
+        try:
+            print("Trying google.auth.default() fallback...")
+            creds, project = google.auth.default()
+            print("Default credentials obtained")
+            creds.refresh(Request())
+            print("Default credentials refreshed successfully")
+            return creds.token
+            
+        except Exception as e:
+            print(f"Default auth fallback failed: {e}")
+            return None
+        
     except Exception as e:
-        print(f"Authentication error: {e}")
+        print(f"Error getting access token: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def generate_answer_with_grounding(question, access_token, conversation_history=None):
